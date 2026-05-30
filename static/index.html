@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WGS Analysis Platform</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f7fa; color: #333; }
+
+/* Header */
+.header { background: linear-gradient(135deg, #1a73e8, #0d47a1); color: white; padding: 20px 30px; display: flex; justify-content: space-between; align-items: center; }
+.header h1 { font-size: 22px; font-weight: 600; }
+.header .sys-info { font-size: 13px; opacity: 0.85; }
+
+/* Layout */
+.container { max-width: 1200px; margin: 20px auto; padding: 0 20px; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+@media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
+
+/* Card */
+.card { background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); padding: 24px; margin-bottom: 20px; }
+.card h2 { font-size: 17px; margin-bottom: 16px; color: #1a73e8; border-bottom: 2px solid #e8f0fe; padding-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+.card h2 .badge { font-size: 11px; background: #e8f0fe; color: #1a73e8; padding: 2px 8px; border-radius: 10px; font-weight: normal; }
+
+/* Form */
+.form-row { display: flex; gap: 16px; margin-bottom: 14px; flex-wrap: wrap; }
+.form-group { flex: 1; min-width: 200px; }
+.form-group label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 4px; color: #555; }
+.form-group input, .form-group select { width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; transition: border-color 0.2s; }
+.form-group input:focus, .form-group select:focus { outline: none; border-color: #1a73e8; box-shadow: 0 0 0 2px rgba(26,115,232,0.15); }
+
+/* Checkbox group */
+.checkbox-group { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 4px; }
+.checkbox-group label { font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 4px; }
+
+/* Buttons */
+.btn { border: none; padding: 10px 24px; border-radius: 6px; font-size: 14px; cursor: pointer; transition: all 0.2s; }
+.btn-primary { background: #1a73e8; color: white; }
+.btn-primary:hover { background: #1557b0; }
+.btn-secondary { background: #e8f0fe; color: #1a73e8; }
+.btn-secondary:hover { background: #d2e3fc; }
+.btn-sm { padding: 4px 12px; font-size: 13px; }
+.btn-danger { background: #fce8e6; color: #d93025; }
+
+/* Detect badge */
+.detect-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 500; }
+.detect-badge.high { background: #e6f4ea; color: #137333; }
+.detect-badge.none { background: #fce8e6; color: #d93025; }
+
+/* Table */
+.table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.table th { background: #f8f9fa; text-align: left; padding: 10px 8px; font-weight: 500; color: #555; }
+.table td { padding: 10px 8px; border-top: 1px solid #eee; }
+.table tr:hover { background: #f8f9fa; }
+
+/* Status */
+.status { font-weight: 500; }
+.status.pending { color: #ffa000; }
+.status.running { color: #1a73e8; }
+.status.completed { color: #0d904f; }
+.status.failed { color: #d93025; }
+.status.cancelled { color: #666; }
+
+/* Progress bar */
+.progress-bar { background: #e8e8e8; border-radius: 4px; width: 80px; height: 8px; display: inline-block; vertical-align: middle; }
+.progress-bar .fill { border-radius: 4px; height: 100%; transition: width 0.3s; }
+
+/* Reference status */
+.ref-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.ref-card { border: 1px solid #e0e0e0; border-radius: 8px; padding: 14px; }
+.ref-card.ready { border-color: #0d904f; background: #f6fef6; }
+.ref-card.partial { border-color: #ffa000; background: #fffbf0; }
+.ref-card.missing { border-color: #e0e0e0; background: #fafafa; }
+.ref-card h3 { font-size: 15px; margin-bottom: 8px; }
+.ref-file { font-size: 12px; color: #666; margin: 2px 0; }
+.ref-file .ok { color: #0d904f; }
+.ref-file .miss { color: #d93025; }
+
+/* Result modal */
+.modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 100; justify-content: center; align-items: center; }
+.modal-overlay.active { display: flex; }
+.modal { background: white; border-radius: 12px; padding: 28px; max-width: 700px; width: 90%; max-height: 80vh; overflow-y: auto; }
+.modal h3 { font-size: 18px; margin-bottom: 16px; color: #1a73e8; }
+.modal .close { float: right; cursor: pointer; font-size: 20px; color: #666; }
+.result-section { margin-bottom: 16px; }
+.result-section h4 { font-size: 14px; color: #555; margin-bottom: 6px; }
+.result-item { display: flex; justify-content: space-between; padding: 4px 0; font-size: 14px; }
+.result-item .label { color: #666; }
+.result-item .value { font-weight: 500; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🧬 WGS Analysis Platform</h1>
+  <div class="sys-info" id="sysInfo">加载中...</div>
+</div>
+
+<div class="container">
+
+  <!-- 提交作业 -->
+  <div class="card">
+    <h2>📋 提交分析作业</h2>
+    <div class="form-row">
+      <div class="form-group">
+        <label>样本 ID</label>
+        <input type="text" id="sampleId" placeholder="例: DRR893179">
+      </div>
+      <div class="form-group">
+        <label>输入类型</label>
+        <select id="inputType" onchange="toggleInputFields()">
+          <option value="bam">BAM 文件</option>
+          <option value="fastq">FASTQ 文件 (需要比对)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>参考基因组 <span id="refAutoLabel" style="font-size:11px; color:#0d904f;"></span></label>
+        <select id="reference">
+          <option value="hg38">hg38 (GRCh38) — 主流</option>
+          <option value="hg19">hg19 (GRCh37)</option>
+          <option value="t2t">T2T-CHM13v2 — 最新</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- BAM 输入 -->
+    <div id="bamInput">
+      <div class="form-row">
+        <div class="form-group" style="flex:2">
+          <label>BAM 文件路径</label>
+          <div style="display:flex; gap:8px;">
+            <input type="text" id="bamFile" placeholder="/data/sample/sample.sorted.bam" style="flex:1">
+            <button class="btn btn-secondary btn-sm" onclick="detectBam()">🔍 自动识别</button>
+          </div>
+        </div>
+      </div>
+      <div id="bamDetectResult" style="margin-bottom:14px;"></div>
+    </div>
+
+    <!-- FASTQ 输入 -->
+    <div id="fastqInput" style="display:none">
+      <div class="form-row">
+        <div class="form-group">
+          <label>R1 FASTQ</label>
+          <input type="text" id="fastqR1" placeholder="/data/sample/sample_R1.fastq.gz">
+        </div>
+        <div class="form-group">
+          <label>R2 FASTQ</label>
+          <input type="text" id="fastqR2" placeholder="/data/sample/sample_R2.fastq.gz">
+        </div>
+      </div>
+    </div>
+
+    <!-- 分析项目 -->
+    <div class="form-row">
+      <div class="form-group" style="flex:3">
+        <label>分析项目</label>
+        <div class="checkbox-group">
+          <label><input type="checkbox" value="extract_chrY" checked> 提取 chrY</label>
+          <label><input type="checkbox" value="extract_chrM" checked> 提取 chrM</label>
+          <label><input type="checkbox" value="y_haplogroup" checked> Y 单倍群</label>
+          <label><input type="checkbox" value="mt_haplogroup" disabled> MT 单倍群 (待开发)</label>
+          <label><input type="checkbox" value="chip_format"> 芯片格式导出</label>
+          <label><input type="checkbox" value="1240k"> 1240K 古DNA</label>
+          <label><input type="checkbox" value="pca" disabled> PCA 分析 (待开发)</label>
+          <label><input type="checkbox" value="admixture" disabled> ADMIXTURE 祖源 (待开发)</label>
+          <label><input type="checkbox" value="g25" disabled> G25 坐标 (待开发)</label>
+          <label><input type="checkbox" value="qpadm" disabled> qpAdm 建模 (待开发)</label>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:8px; display:flex; align-items:center; gap:12px;">
+      <button class="btn btn-primary" onclick="submitJob()">🚀 提交作业</button>
+      <span id="submitMsg" style="font-size:14px;"></span>
+    </div>
+  </div>
+
+  <!-- 作业列表 -->
+  <div class="card">
+    <h2>
+      📊 作业列表
+      <button class="btn btn-secondary btn-sm" onclick="refreshJobs()">刷新</button>
+    </h2>
+    <div id="jobsList" style="font-size:14px; color:#666;">暂无作业</div>
+  </div>
+
+  <!-- 参考文件 + 系统信息 -->
+  <div class="grid-2">
+    <div class="card">
+      <h2>📁 参考文件状态</h2>
+      <div id="refStatus">加载中...</div>
+    </div>
+    <div class="card">
+      <h2>⚙️ 系统资源</h2>
+      <div id="systemDetail">加载中...</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- 结果弹窗 -->
+<div class="modal-overlay" id="resultModal">
+  <div class="modal">
+    <span class="close" onclick="closeModal()">&times;</span>
+    <h3 id="modalTitle">分析结果</h3>
+    <div id="modalContent"></div>
+  </div>
+</div>
+
+<script>
+const API = '/api/v1';
+
+// ===== 输入切换 =====
+function toggleInputFields() {
+  const type = document.getElementById('inputType').value;
+  document.getElementById('bamInput').style.display = type === 'bam' ? 'block' : 'none';
+  document.getElementById('fastqInput').style.display = type === 'fastq' ? 'block' : 'none';
+  document.getElementById('refAutoLabel').textContent = '';
+  document.getElementById('bamDetectResult').innerHTML = '';
+}
+
+// ===== BAM 自动识别 =====
+async function detectBam() {
+  const bamPath = document.getElementById('bamFile').value.trim();
+  if (!bamPath) { alert('请先输入 BAM 文件路径'); return; }
+
+  const el = document.getElementById('bamDetectResult');
+  el.innerHTML = '<span style="color:#666;">检测中...</span>';
+
+  try {
+    const res = await fetch(`${API}/bam/detect`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ bam_path: bamPath })
+    });
+
+    if (!res.ok) {
+      const e = await res.json();
+      el.innerHTML = `<span class="detect-badge none">检测失败: ${e.detail}</span>`;
+      return;
+    }
+
+    const data = await res.json();
+
+    if (data.confidence === 'high') {
+      // 自动设置参考基因组
+      const refSelect = document.getElementById('reference');
+      if (data.system_version && data.system_version !== 'unknown') {
+        refSelect.value = data.system_version;
+        document.getElementById('refAutoLabel').textContent = '(已自动识别)';
+      }
+
+      el.innerHTML = `
+        <span class="detect-badge high">✓ ${data.reference_display}</span>
+        <span style="font-size:12px; color:#666; margin-left:8px;">
+          chr1=${data.chr1_length.toLocaleString()} | 
+          ${data.has_chr_prefix ? 'chr前缀' : '无chr前缀'} | 
+          MT=${data.mt_name || '未知'}
+        </span>`;
+    } else {
+      el.innerHTML = `<span class="detect-badge none">⚠ 无法识别参考基因组 (chr1=${data.chr1_length})</span>`;
+    }
+  } catch(e) {
+    el.innerHTML = `<span class="detect-badge none">请求失败: ${e.message}</span>`;
+  }
+}
+
+// ===== 提交作业 =====
+async function submitJob() {
+  const sampleId = document.getElementById('sampleId').value.trim();
+  if (!sampleId) { alert('请输入样本 ID'); return; }
+
+  const inputType = document.getElementById('inputType').value;
+  let inputFiles = [];
+  if (inputType === 'bam') {
+    const bam = document.getElementById('bamFile').value.trim();
+    if (!bam) { alert('请输入 BAM 文件路径'); return; }
+    inputFiles = [bam];
+  } else {
+    const r1 = document.getElementById('fastqR1').value.trim();
+    const r2 = document.getElementById('fastqR2').value.trim();
+    if (!r1 || !r2) { alert('请输入 FASTQ 文件路径'); return; }
+    inputFiles = [r1, r2];
+  }
+
+  const analyses = [...document.querySelectorAll('.checkbox-group input[type=checkbox]:checked:not(:disabled)')].map(c => c.value);
+  if (analyses.length === 0) { alert('请选择至少一项分析'); return; }
+
+  try {
+    const res = await fetch(`${API}/jobs`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        sample_id: sampleId,
+        input_type: inputType,
+        input_files: inputFiles,
+        analyses: analyses,
+        reference: document.getElementById('reference').value,
+      })
+    });
+
+    if (!res.ok) {
+      const e = await res.json();
+      alert('提交失败: ' + (e.detail || JSON.stringify(e)));
+      return;
+    }
+
+    const data = await res.json();
+    document.getElementById('submitMsg').innerHTML = `<span style="color:#0d904f;">✅ 作业已提交: ${data.job_id.slice(0,8)}...</span>`;
+    setTimeout(() => { document.getElementById('submitMsg').innerHTML = ''; }, 3000);
+    setTimeout(refreshJobs, 500);
+  } catch(e) {
+    alert('请求失败: ' + e.message);
+  }
+}
+
+// ===== 作业列表 =====
+async function refreshJobs() {
+  try {
+    const res = await fetch(`${API}/jobs`);
+    const jobs = await res.json();
+    const el = document.getElementById('jobsList');
+
+    if (jobs.length === 0) {
+      el.innerHTML = '<div style="text-align:center; padding:20px; color:#999;">暂无作业</div>';
+      return;
+    }
+
+    let html = '<table class="table"><tr><th>ID</th><th>样本</th><th>状态</th><th>进度</th><th>当前步骤</th><th>时间</th><th>操作</th></tr>';
+
+    for (const j of jobs) {
+      const elapsed = j.started_at ? getElapsed(j.started_at, j.completed_at) : '-';
+      html += `<tr>
+        <td style="font-family:monospace; font-size:12px;">${j.job_id.slice(0,8)}</td>
+        <td><strong>${j.sample_id}</strong></td>
+        <td><span class="status ${j.state}">${j.state}</span></td>
+        <td>
+          <div class="progress-bar"><div class="fill" style="width:${j.progress}%; background:${getStateColor(j.state)};"></div></div>
+          <span style="font-size:12px; margin-left:4px;">${j.progress}%</span>
+        </td>
+        <td style="font-size:13px; color:#666;">${j.current_step || '-'}</td>
+        <td style="font-size:12px; color:#888;">${elapsed}</td>
+        <td>
+          ${j.state === 'completed' ? `<button class="btn btn-secondary btn-sm" onclick="viewResult('${j.job_id}')">查看结果</button>` : ''}
+          ${j.state === 'running' ? `<button class="btn btn-danger btn-sm" onclick="cancelJob('${j.job_id}')">取消</button>` : ''}
+          ${j.state === 'failed' ? `<span style="color:#d93025; font-size:12px;" title="${j.error || ''}">❌ 失败</span>` : ''}
+        </td>
+      </tr>`;
+    }
+
+    html += '</table>';
+    el.innerHTML = html;
+  } catch(e) { console.error(e); }
+}
+
+function getStateColor(state) {
+  return {pending:'#ffa000', running:'#1a73e8', completed:'#0d904f', failed:'#d93025', cancelled:'#666'}[state] || '#333';
+}
+
+function getElapsed(start, end) {
+  const s = new Date(start);
+  const e = end ? new Date(end) : new Date();
+  const diff = Math.floor((e - s) / 1000);
+  if (diff < 60) return `${diff}秒`;
+  if (diff < 3600) return `${Math.floor(diff/60)}分${diff%60}秒`;
+  return `${Math.floor(diff/3600)}时${Math.floor((diff%3600)/60)}分`;
+}
+
+// ===== 取消作业 =====
+async function cancelJob(jobId) {
+  if (!confirm('确定取消此作业?')) return;
+  try {
+    await fetch(`${API}/jobs/${jobId}`, { method: 'DELETE' });
+    refreshJobs();
+  } catch(e) { alert('取消失败'); }
+}
+
+// ===== 查看结果 =====
+async function viewResult(jobId) {
+  try {
+    const res = await fetch(`${API}/jobs/${jobId}/result`);
+    const data = await res.json();
+
+    document.getElementById('modalTitle').textContent = `分析结果 — ${data.sample_id}`;
+
+    let html = '';
+
+    // Y 单倍群
+    if (data.statistics.y_haplogroup) {
+      const y = data.statistics.y_haplogroup;
+      html += `<div class="result-section">
+        <h4>🧬 Y 单倍群</h4>
+        <div class="result-item"><span class="label">单倍群</span><span class="value" style="font-size:18px; color:#1a73e8;">${y.haplogroup}</span></div>
+        <div class="result-item"><span class="label">QC-score</span><span class="value">${y.confidence}</span></div>
+        <div class="result-item"><span class="label">使用标记</span><span class="value">${y.markers_used}</span></div>
+      </div>`;
+    }
+
+    // chrY
+    if (data.statistics.chrY) {
+      html += `<div class="result-section">
+        <h4>Y 染色体</h4>
+        <div class="result-item"><span class="label">覆盖度</span><span class="value">${data.statistics.chrY.coverage.toFixed(2)}x</span></div>
+        <div class="result-item"><span class="label">SNP 数量</span><span class="value">${data.statistics.chrY.snp_count.toLocaleString()}</span></div>
+      </div>`;
+    }
+
+    // chrM
+    if (data.statistics.chrM) {
+      html += `<div class="result-section">
+        <h4>线粒体</h4>
+        <div class="result-item"><span class="label">覆盖度</span><span class="value">${data.statistics.chrM.coverage.toFixed(2)}x</span></div>
+        <div class="result-item"><span class="label">SNP 数量</span><span class="value">${data.statistics.chrM.snp_count.toLocaleString()}</span></div>
+      </div>`;
+    }
+
+    // 1240K
+    if (data.statistics['1240k']) {
+      html += `<div class="result-section">
+        <h4>1240K 古DNA</h4>
+        <div class="result-item"><span class="label">总位点</span><span class="value">${data.statistics['1240k'].total_positions.toLocaleString()}</span></div>
+        <div class="result-item"><span class="label">覆盖率</span><span class="value">${(data.statistics['1240k'].genotype_rate * 100).toFixed(1)}%</span></div>
+      </div>`;
+    }
+
+    // 芯片格式
+    if (data.statistics.chip_formats) {
+      html += `<div class="result-section"><h4>芯片格式</h4>`;
+      for (const c of data.statistics.chip_formats) {
+        html += `<div class="result-item"><span class="label">${c.format}</span><span class="value">${(c.genotype_rate * 100).toFixed(1)}%</span></div>`;
+      }
+      html += '</div>';
+    }
+
+    // 比对统计
+    if (data.statistics.alignment) {
+      const a = data.statistics.alignment;
+      html += `<div class="result-section">
+        <h4>比对统计</h4>
+        <div class="result-item"><span class="label">总读取数</span><span class="value">${a.total_reads.toLocaleString()}</span></div>
+        <div class="result-item"><span class="label">比对率</span><span class="value">${a.mapping_rate.toFixed(1)}%</span></div>
+      </div>`;
+    }
+
+    // PCA
+    if (data.statistics.pca && data.statistics.pca.pc1 !== undefined) {
+      const p = data.statistics.pca;
+      html += `<div class="result-section">
+        <h4>📊 PCA 分析</h4>
+        <div class="result-item"><span class="label">PC1</span><span class="value">${p.pc1.toFixed(4)}</span></div>
+        <div class="result-item"><span class="label">PC2</span><span class="value">${p.pc2.toFixed(4)}</span></div>`;
+      if (p.nearest_populations) {
+        html += '<div style="margin-top:6px; font-size:13px; color:#555;">最近人群:</div>';
+        for (const pop of p.nearest_populations) {
+          html += `<div class="result-item"><span class="label">${pop.name || pop.population}</span><span class="value">${pop.distance ? pop.distance.toFixed(4) : ''}</span></div>`;
+        }
+      }
+      html += '</div>';
+    } else if (data.statistics.pca) {
+      html += `<div class="result-section"><h4>📊 PCA 分析</h4><div style="color:#888;">待开发</div></div>`;
+    }
+
+    // ADMIXTURE
+    if (data.statistics.admixture && typeof data.statistics.admixture === 'object') {
+      html += `<div class="result-section"><h4>🧬 ADMIXTURE 祖源成分</h4>`;
+      const adm = data.statistics.admixture;
+      if (adm.status === 'not_implemented') {
+        html += '<div style="color:#888;">待开发</div>';
+      } else {
+        for (const [calc, result] of Object.entries(adm)) {
+          html += `<div style="font-weight:500; margin:8px 0 4px;">${calc}</div>`;
+          if (result.components) {
+            const sorted = Object.entries(result.components).sort((a,b) => b[1] - a[1]);
+            for (const [comp, pct] of sorted) {
+              if (pct > 0.5) {
+                html += `<div class="result-item"><span class="label">${comp}</span><span class="value">${(pct).toFixed(1)}%</span></div>`;
+              }
+            }
+          }
+        }
+      }
+      html += '</div>';
+    }
+
+    // G25
+    if (data.statistics.g25) {
+      html += `<div class="result-section"><h4>🌍 G25 坐标</h4>`;
+      const g = data.statistics.g25;
+      if (g.status === 'not_implemented') {
+        html += '<div style="color:#888;">待开发</div>';
+      } else if (g.coordinates) {
+        html += `<div style="font-size:12px; font-family:monospace; word-break:break-all; margin-bottom:8px;">${g.coordinates.map(c => c.toFixed(4)).join(', ')}</div>`;
+        if (g.nearest_ancient) {
+          html += '<div style="font-size:13px; color:#555;">最近古代样本:</div>';
+          for (const s of g.nearest_ancient) {
+            html += `<div class="result-item"><span class="label">${s.name}</span><span class="value">${s.distance ? s.distance.toFixed(4) : ''}</span></div>`;
+          }
+        }
+      }
+      html += '</div>';
+    }
+
+    // qpAdm
+    if (data.statistics.qpadm) {
+      html += `<div class="result-section"><h4>📐 qpAdm 祖源建模</h4>`;
+      const q = data.statistics.qpadm;
+      if (q.status === 'not_implemented') {
+        html += '<div style="color:#888;">待开发</div>';
+      } else if (q.proportions) {
+        for (const [src, pct] of Object.entries(q.proportions)) {
+          html += `<div class="result-item"><span class="label">${src}</span><span class="value">${(pct * 100).toFixed(1)}%</span></div>`;
+        }
+        html += `<div class="result-item"><span class="label">p-value</span><span class="value">${q.p_value.toFixed(4)} ${q.feasible ? '✅' : '❌'}</span></div>`;
+      }
+      html += '</div>';
+    }
+
+    // 文件列表
+    if (Object.keys(data.files).length > 0) {
+      html += `<div class="result-section"><h4>📁 输出文件</h4>`;
+      for (const [type, path] of Object.entries(data.files)) {
+        html += `<div class="result-item">
+          <span class="label">${type}</span>
+          <span class="value" style="font-size:12px; font-family:monospace; word-break:break-all;">${path}</span>
+        </div>`;
+      }
+      html += '</div>';
+    }
+
+    document.getElementById('modalContent').innerHTML = html;
+    document.getElementById('resultModal').classList.add('active');
+  } catch(e) {
+    alert('获取结果失败: ' + e.message);
+  }
+}
+
+function closeModal() {
+  document.getElementById('resultModal').classList.remove('active');
+}
+
+// 点击遮罩关闭
+document.getElementById('resultModal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+// ===== 系统信息 =====
+async function loadSystemInfo() {
+  try {
+    const res = await fetch(`${API}/system`);
+    const info = await res.json();
+    document.getElementById('sysInfo').textContent =
+      `CPU: ${info.system_cpus}核 | 内存: ${info.system_memory_gb}GB | 线程: ${info.effective_threads}`;
+
+    document.getElementById('systemDetail').innerHTML = `
+      <div class="result-item"><span class="label">CPU 核心</span><span class="value">${info.system_cpus}</span></div>
+      <div class="result-item"><span class="label">系统内存</span><span class="value">${info.system_memory_gb} GB</span></div>
+      <div class="result-item"><span class="label">使用线程</span><span class="value">${info.effective_threads}</span></div>
+      <div class="result-item"><span class="label">使用内存</span><span class="value">${info.effective_memory_gb} GB</span></div>
+      <div class="result-item"><span class="label">排序内存</span><span class="value">${info.sort_memory_per_thread}/线程</span></div>
+    `;
+  } catch(e) {
+    document.getElementById('systemDetail').textContent = '加载失败';
+  }
+}
+
+// ===== 参考文件状态 =====
+async function loadReferences() {
+  try {
+    const res = await fetch(`${API}/references`);
+    const refs = await res.json();
+    let html = '<div class="ref-grid">';
+
+    for (const [ver, info] of Object.entries(refs)) {
+      const allOk = info.ready;
+      const fileEntries = Object.entries(info.files);
+      const okCount = fileEntries.filter(([,v]) => v).length;
+      const cls = allOk ? 'ready' : okCount > 0 ? 'partial' : 'missing';
+      const icon = allOk ? '✅' : okCount > 0 ? '⚠️' : '❌';
+
+      html += `<div class="ref-card ${cls}">
+        <h3>${icon} ${info.display_name || ver}</h3>
+        <div style="font-size:12px; color:#888; margin-bottom:6px;">${okCount}/${fileEntries.length} 文件就绪</div>`;
+
+      for (const [file, ok] of fileEntries) {
+        html += `<div class="ref-file"><span class="${ok ? 'ok' : 'miss'}">${ok ? '✓' : '✗'}</span> ${file}</div>`;
+      }
+      html += '</div>';
+    }
+
+    html += '</div>';
+    document.getElementById('refStatus').innerHTML = html;
+  } catch(e) {
+    document.getElementById('refStatus').textContent = '加载失败';
+  }
+}
+
+// ===== 初始化 =====
+loadSystemInfo();
+loadReferences();
+refreshJobs();
+setInterval(refreshJobs, 5000);
+</script>
+</body>
+</html>
