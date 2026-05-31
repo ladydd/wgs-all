@@ -106,19 +106,27 @@ class ChipFormatExtractor:
         self,
         reference_dir: Optional[Path] = None,
         threads: int = None,
+        reference: str = "hg38",
     ):
         self.reference_dir = reference_dir or settings.reference_dir
         self.threads = threads or settings.threads
+        self.reference = reference
+        # T2T 走 hg38 流程
+        if reference == "t2t":
+            self.reference = "hg38"
         self.microarray_dir = self.reference_dir / "microarray"
         self.templates_dir = self.microarray_dir / "raw_file_templates"
         
-        # 初始化 liftOver
-        chain_file = reference_manager.get_liftover_chain("hg38", "hg19")
-        if chain_file and chain_file.exists():
-            self._liftover = LiftOver(str(chain_file))
+        # hg19 不需要 liftOver
+        if self.reference == "hg19":
+            self._liftover = None
         else:
-            logger.warning("LiftOver chain 文件不存在，将从网络下载")
-            self._liftover = LiftOver('hg38', 'hg19')
+            chain_file = reference_manager.get_liftover_chain("hg38", "hg19")
+            if chain_file and chain_file.exists():
+                self._liftover = LiftOver(str(chain_file))
+            else:
+                logger.warning("LiftOver chain 文件不存在，将从网络下载")
+                self._liftover = LiftOver('hg38', 'hg19')
     
     def extract(
         self,
@@ -148,15 +156,23 @@ class ChipFormatExtractor:
         sorted_tab = temp_dir / f"{sample_id}_sorted.tab"
         
         try:
-            # Step 1: 从 BAM 提取基因型 (hg38)
+            # Step 1: 从 BAM 提取基因型
             logger.info("Step 1: 从 BAM 提取基因型...")
-            ref_vcf = self.microarray_dir / "All_SNPs_hg38_ref.tab.gz"
-            ref_genome = reference_manager.get_genome_path("hg38")
+            if self.reference == "hg19":
+                ref_vcf = self.microarray_dir / "All_SNPs_hg19_ref.tab.gz"
+                ref_genome = reference_manager.get_genome_path("hg19")
+            else:
+                ref_vcf = self.microarray_dir / "All_SNPs_hg38_ref.tab.gz"
+                ref_genome = reference_manager.get_genome_path("hg38")
             self._extract_genotypes_from_bam(bam_file, str(ref_vcf), str(ref_genome), str(raw_tab))
             
-            # Step 2: LiftOver hg38 -> hg19
-            logger.info("Step 2: 坐标转换 hg38 -> hg19...")
-            self._liftover_to_hg19(str(raw_tab), str(lifted_tab))
+            # Step 2: LiftOver (hg38 需要转 hg19，hg19 跳过)
+            if self._liftover:
+                logger.info("Step 2: 坐标转换 hg38 -> hg19...")
+                self._liftover_to_hg19(str(raw_tab), str(lifted_tab))
+            else:
+                logger.info("Step 2: hg19 BAM，跳过 LiftOver")
+                lifted_tab = raw_tab
             
             # Step 3: 排序
             logger.info("Step 3: 排序...")

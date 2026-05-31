@@ -206,16 +206,24 @@ def cmd_align(args):
 def cmd_extract_chr(args):
     """提取染色体"""
     from .pipeline.alignment import ChromosomeExtractor
+    from .core.bam_detector import detect_bam_reference, map_to_system_version
     
     bam_file = args.bam
     chromosome = args.chromosome
     sample_id = args.sample or Path(bam_file).stem.replace('.sorted', '')
     output_dir = args.output or str(Path(bam_file).parent)
     
+    # 自动检测参考版本（除非用户指定）
+    if args.reference:
+        reference = args.reference
+    else:
+        bam_info = detect_bam_reference(bam_file)
+        reference = map_to_system_version(bam_info)
+    
     logger.info(f"提取 {chromosome}: {bam_file}")
     
     extractor = ChromosomeExtractor(
-        reference=args.reference or "hg38",
+        reference=reference,
         threads=args.threads or settings.threads,
     )
     
@@ -232,16 +240,21 @@ def cmd_extract_chr(args):
 def cmd_extract_chip(args):
     """提取芯片格式"""
     from .pipeline.extraction import ChipFormatExtractor
+    from .core.bam_detector import detect_bam_reference, map_to_system_version
     
     bam_file = args.bam
     output_dir = args.output or f"{Path(bam_file).stem}_chip_formats"
     sample_id = args.sample or Path(bam_file).stem.replace('.sorted', '')
     
+    # 自动检测参考版本
+    bam_info = detect_bam_reference(bam_file)
+    reference = map_to_system_version(bam_info)
+    
     logger.info(f"提取芯片格式: {bam_file}")
     logger.info(f"输出目录: {output_dir}")
     logger.info(f"样本 ID: {sample_id}")
     
-    extractor = ChipFormatExtractor()
+    extractor = ChipFormatExtractor(reference=reference)
     results = extractor.extract(bam_file, output_dir, sample_id)
     
     print(f"\n生成 {len(results)} 个文件:")

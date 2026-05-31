@@ -239,8 +239,26 @@ class ChromosomeExtractor:
         
         logger.info(f"提取 {chromosome}: {bam_file}")
         
+        # 自动适配染色体命名（chrY↔Y, chrM↔MT）
+        actual_chr = chromosome
+        check_cmd = f'samtools idxstats "{bam_file}" | cut -f1'
+        check = subprocess.run(check_cmd, shell=True, capture_output=True, text=True)
+        if check.returncode == 0:
+            chroms_in_bam = check.stdout.strip().split("\n")
+            if chromosome not in chroms_in_bam:
+                # 尝试去掉/加上 chr 前缀
+                alt = chromosome.replace("chr", "") if chromosome.startswith("chr") else f"chr{chromosome}"
+                # MT ↔ chrM
+                if chromosome == "chrM" and "MT" in chroms_in_bam:
+                    alt = "MT"
+                elif chromosome == "MT" and "chrM" in chroms_in_bam:
+                    alt = "chrM"
+                if alt in chroms_in_bam:
+                    logger.info(f"  BAM 中无 {chromosome}，使用 {alt}")
+                    actual_chr = alt
+        
         # 提取染色体
-        cmd = f'samtools view -@ {self.threads} -bh "{bam_file}" {chromosome} -o "{chr_bam}"'
+        cmd = f'samtools view -@ {self.threads} -bh "{bam_file}" {actual_chr} -o "{chr_bam}"'
         _run_cmd(cmd, f"提取 {chromosome}")
         
         # 建索引
