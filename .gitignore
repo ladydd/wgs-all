@@ -14,11 +14,22 @@ old/
 *.bwt
 *.pac
 *.sa
+*.tar
 *.tar.gz
 
-# 临时文件
+# 环境
+.env
+.venv/
+*.egg-info/
+
+# IDE
+.vscode/
+.idea/
+
+# 系统
 .DS_Store
 *.swp
 *.tmp
+
+# 第三方子仓库
 adna_to_dataset/
-.env
