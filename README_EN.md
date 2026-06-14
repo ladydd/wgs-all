@@ -4,6 +4,16 @@
 
 A self-contained Docker image for whole-genome sequencing analysis of ancient DNA. From FASTQ to ancestry reports — no internet, no dependencies, just `docker load` and run.
 
+## Download
+
+Docker image (14 GB) available at: **[guren.xin](https://guren.xin)**
+
+After download:
+```bash
+docker load < wgs-all.tar
+docker run --rm wgs-all help
+```
+
 ## Features
 
 - **Alignment**: FASTQ → BAM (hg38 / hg19 / T2T — three reference genomes)

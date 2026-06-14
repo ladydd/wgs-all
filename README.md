@@ -6,6 +6,16 @@
 
 一个自包含的 Docker 镜像，用于古DNA全基因组测序数据分析。从 FASTQ 到祖源报告，无需联网、无需配置环境，`docker load` 即用。
 
+## 下载镜像
+
+Docker 镜像文件（14 GB）下载地址：**[guren.xin](https://guren.xin)**
+
+下载后：
+```bash
+docker load < wgs-all.tar
+docker run --rm wgs-all help
+```
+
 ## 功能
 
 - **比对**: FASTQ → BAM（hg38 / hg19 / T2T 三套参考基因组）
