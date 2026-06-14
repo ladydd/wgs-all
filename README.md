@@ -1,91 +1,70 @@
-# WGS-All | Ancient DNA Analysis Platform
+# WGS-All | 古DNA全基因组分析平台
 
-[🇨🇳 中文](README_CN.md) | English
+[English](README_EN.md) | 🇨🇳 中文
 
-A self-contained Docker image for whole-genome sequencing analysis of ancient DNA. From FASTQ to ancestry reports — no internet, no dependencies, just `docker load` and run.
+---
 
-## Features
+一个自包含的 Docker 镜像，用于古DNA全基因组测序数据分析。从 FASTQ 到祖源报告，无需联网、无需配置环境，`docker load` 即用。
 
-- **Alignment**: FASTQ → BAM (hg38 / hg19 / T2T — three reference genomes)
-- **Y Haplogroup**: Yleaf v4 (ISOGG / YFull / FTDNA trees, ancient DNA mode)
-- **MT Haplogroup**: Haplogrep3 (PhyloTree 17)
-- **EIGENSTRAT Export**: BAM → ancient DNA standard delivery format (1240K / 2M AADR)
-- **Chip Formats**: 11 formats (23andMe / AncestryDNA / FTDNA / MyHeritage / LivingDNA)
-- **Ancestry Calculators**: 28 models (E11, K13, K36, K47, HarappaWorld, etc.)
-- **G25 Distance**: Compare with 10,927 modern + 1,003 ancient populations
-- **Population Tools**: smartpca (PCA) / qpAdm (ADMIXTOOLS) / PLINK / ADMIXTURE
-- **HTML Report**: One-page summary of all results
+## 功能
 
-## Quick Start
+- **比对**: FASTQ → BAM（hg38 / hg19 / T2T 三套参考基因组）
+- **Y 单倍群**: Yleaf v4（ISOGG / YFull / FTDNA 树，古DNA模式）
+- **MT 单倍群**: Haplogrep3（PhyloTree 17）
+- **EIGENSTRAT 导出**: BAM → 古DNA标准交付格式（1240K / 2M AADR）
+- **芯片格式**: 11 种（23andMe / AncestryDNA / FTDNA / MyHeritage / LivingDNA）
+- **祖源计算器**: 28 个（E11, K13, K36, K47, HarappaWorld 等）
+- **G25 距离计算**: 与 10,927 个现代 + 1,003 个古代人群比较
+- **群体工具**: smartpca (PCA) / qpAdm (ADMIXTOOLS) / PLINK / ADMIXTURE
+- **HTML 报告**: 一页纸总结所有结果
+
+## 快速开始
 
 ```bash
-# Load image
+# 加载镜像
 docker load < wgs-all.tar
 
-# Align (hg38 / hg19 / T2T)
+# 比对（hg38 / hg19 / T2T）
 docker run --rm -v /data:/data wgs-all align SAMPLE R1.fq.gz R2.fq.gz
 docker run --rm -v /data:/data wgs-all align-hg19 SAMPLE R1.fq.gz R2.fq.gz
 docker run --rm -v /data:/data wgs-all align-t2t SAMPLE R1.fq.gz R2.fq.gz
 
-# Y haplogroup
+# Y 单倍群
 docker run --rm -v /data:/data wgs-all extract-chr /data/x.bam chrY -o /data -s SAMPLE
 docker run --rm -v /data:/data wgs-all analyze-y /data/SAMPLE.chrY.bam -o /data/yleaf
 
-# EIGENSTRAT export
+# EIGENSTRAT 导出
 docker run --rm -v /data:/data wgs-all bam-to-eigenstrat \
     --bam /data/x.bam -p Pop -o /data/out -n dataset --deliver-hg19
 
-# Chip formats + ancestry calculator
+# 芯片格式 + 祖源计算器
 docker run --rm -v /data:/data wgs-all extract-chip /data/x.bam -o /data/chip -s SAMPLE
 docker run --rm -v /data:/data wgs-all admixture-calc /data/chip/SAMPLE_23andMe_V5.txt -c E11,K36
 
-# G25 distance
+# G25 距离
 docker run --rm wgs-all g25 --coords "0.02,-0.015,..." --top 20
 
-# All commands
+# 查看所有命令
 docker run --rm wgs-all help
 ```
 
-## Requirements
+## 系统要求
 
 - Docker 20+
-- Disk: 50 GB (image) + data space
-- RAM: 4 GB (analysis) / 16 GB (alignment)
-- OS: Linux / macOS / Windows (Docker Desktop)
+- 磁盘: 50 GB（镜像）+ 数据空间
+- 内存: 4 GB（分析）/ 16 GB（比对）
+- 系统: Linux / macOS / Windows (Docker Desktop)
 
-## Built-in Tools
+## 文档
 
-| Tool | Version | Purpose |
-|---|---|---|
-| BWA | 0.7.19 | Sequence alignment |
-| samtools | 1.16.1 | BAM processing |
-| bcftools | 1.16 | Variant calling / VCF |
-| pileupCaller | 1.6.0 | Ancient DNA genotyping (randomHaploid) |
-| Yleaf | v4.0.2 | Y-chromosome haplogroup |
-| Haplogrep3 | 3.2.2 | Mitochondrial haplogroup |
-| PLINK | 1.9 | Genome data conversion |
-| ADMIXTURE | 1.3 | Ancestry estimation |
-| smartpca | v16000 | PCA |
-| ADMIXTOOLS | v810 | qpAdm / f-statistics |
+- [用户手册](docs/user-manual.md)
+- [致谢与引用](docs/credits.md)
+- [项目进度](docs/project_review.md)
 
-## Key Design Choices
+## 许可
 
-- **Zero dependencies**: All reference genomes and tools bundled inside the image
-- **Offline**: No internet required after `docker load`
-- **Auto-detection**: Automatically identifies BAM reference version (hg38/hg19/T2T)
-- **Chromosome naming**: Automatically adapts between `chrY`↔`Y`, `chrM`↔`MT`
-- **Three references**: hg38, hg19 (hs37d5), and T2T (CHM13v2) — all with BWA indices
+MIT（平台代码）。各工具的许可证详见 [credits.md](docs/credits.md)。
 
-## Documentation
-
-- [User Manual (中文)](docs/user-manual.md)
-- [Credits & Citations](docs/credits.md)
-- [Project Status](docs/project_review.md)
-
-## License
-
-MIT (platform code). See [credits.md](docs/credits.md) for individual tool licenses.
-
-## Contact
+## 联系
 
 hello@ladydd.com | [guren.xin](https://guren.xin)
