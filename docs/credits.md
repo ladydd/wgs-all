@@ -17,6 +17,7 @@
 | smartpca | v16000 | Nick Patterson | Free (academic) | Patterson N. et al. (2006) Population structure. PLoS Genet |
 | ADMIXTOOLS (qpAdm) | v810 | Nick Patterson | Free (academic) | Haak W. et al. (2015) Massive migration. Nature |
 | admix | - | stevenliuyi | MIT | github.com/stevenliuyi/admix |
+| WGSExtract | v4 | WGS Extract Dev Team | GPL-3 | wgsextract.github.io (芯片模板 + SNP 注释数据) |
 
 ## 数据
 
