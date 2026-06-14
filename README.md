@@ -1,77 +1,91 @@
-# WGS Analysis Platform
+# WGS-All | Ancient DNA Analysis Platform
 
-全基因组测序 (WGS) 数据分析平台，面向古 DNA 研究。
+[🇨🇳 中文](README_CN.md) | English
 
-## 功能
+A self-contained Docker image for whole-genome sequencing analysis of ancient DNA. From FASTQ to ancestry reports — no internet, no dependencies, just `docker load` and run.
 
-- **比对**: FASTQ → BAM (hg38 / hg19 / T2T)
-- **EIGENSTRAT 导出**: BAM → 古 DNA 标准交付格式 (1240K / 2M AADR)
-- **Y 单倍群**: Yleaf v4 (isogg/yfull/ftdna 树，支持 hg38/hg19/t2t)
-- **MT 单倍群**: Haplogrep3
-- **芯片格式**: 11 种格式 (23andMe/Ancestry/FTDNA/MyHeritage/LDNA)
-- **祖源计算器**: 28 个 (E11/K13/K36/K47/HarappaWorld 等)
-- **G25 距离计算**: 与 10927 现代 + 1003 古代人群比较
-- **群体分析工具**: PCA (smartpca) / qpAdm (ADMIXTOOLS) / PLINK
-- **HTML 报告**: 一页纸总结所有分析结果
+## Features
 
-## 使用
+- **Alignment**: FASTQ → BAM (hg38 / hg19 / T2T — three reference genomes)
+- **Y Haplogroup**: Yleaf v4 (ISOGG / YFull / FTDNA trees, ancient DNA mode)
+- **MT Haplogroup**: Haplogrep3 (PhyloTree 17)
+- **EIGENSTRAT Export**: BAM → ancient DNA standard delivery format (1240K / 2M AADR)
+- **Chip Formats**: 11 formats (23andMe / AncestryDNA / FTDNA / MyHeritage / LivingDNA)
+- **Ancestry Calculators**: 28 models (E11, K13, K36, K47, HarappaWorld, etc.)
+- **G25 Distance**: Compare with 10,927 modern + 1,003 ancient populations
+- **Population Tools**: smartpca (PCA) / qpAdm (ADMIXTOOLS) / PLINK / ADMIXTURE
+- **HTML Report**: One-page summary of all results
 
-通过 Docker 镜像使用，无需配置环境，不联网：
+## Quick Start
 
 ```bash
-# 加载镜像
-docker load < wgs-all.tar.gz
+# Load image
+docker load < wgs-all.tar
 
-# 比对 (三套参考)
+# Align (hg38 / hg19 / T2T)
 docker run --rm -v /data:/data wgs-all align SAMPLE R1.fq.gz R2.fq.gz
 docker run --rm -v /data:/data wgs-all align-hg19 SAMPLE R1.fq.gz R2.fq.gz
 docker run --rm -v /data:/data wgs-all align-t2t SAMPLE R1.fq.gz R2.fq.gz
 
-# Y 单倍群
-docker run --rm -v /data:/data wgs-all analyze-y /data/x.chrY.bam -o /data/yleaf
+# Y haplogroup
+docker run --rm -v /data:/data wgs-all extract-chr /data/x.bam chrY -o /data -s SAMPLE
+docker run --rm -v /data:/data wgs-all analyze-y /data/SAMPLE.chrY.bam -o /data/yleaf
 
-# MT 单倍群
-docker run --rm -v /data:/data wgs-all analyze-mt /data/x.chrM.vcf.gz -o /data/mt.txt
-
-# EIGENSTRAT 导出
+# EIGENSTRAT export
 docker run --rm -v /data:/data wgs-all bam-to-eigenstrat \
     --bam /data/x.bam -p Pop -o /data/out -n dataset --deliver-hg19
 
-# 芯片格式
+# Chip formats + ancestry calculator
 docker run --rm -v /data:/data wgs-all extract-chip /data/x.bam -o /data/chip -s SAMPLE
+docker run --rm -v /data:/data wgs-all admixture-calc /data/chip/SAMPLE_23andMe_V5.txt -c E11,K36
 
-# 祖源计算器
-docker run --rm -v /data:/data wgs-all admixture-calc /data/chip/x_23andMe_V5.txt -c E11,K36
-
-# G25 距离
+# G25 distance
 docker run --rm wgs-all g25 --coords "0.02,-0.015,..." --top 20
 
-# 查看所有命令
+# All commands
 docker run --rm wgs-all help
 ```
 
-详细文档见 `docs/wgs_all_docker_guide.md`。
+## Requirements
 
-## 开发
+- Docker 20+
+- Disk: 50 GB (image) + data space
+- RAM: 4 GB (analysis) / 16 GB (alignment)
+- OS: Linux / macOS / Windows (Docker Desktop)
 
-```bash
-# 本地开发环境
-conda activate ychr
-cd wgs-platform
-python -m app.cli --help
+## Built-in Tools
 
-# 构建镜像
-bash docker/eigenstrat/build_bg.sh start
+| Tool | Version | Purpose |
+|---|---|---|
+| BWA | 0.7.19 | Sequence alignment |
+| samtools | 1.16.1 | BAM processing |
+| bcftools | 1.16 | Variant calling / VCF |
+| pileupCaller | 1.6.0 | Ancient DNA genotyping (randomHaploid) |
+| Yleaf | v4.0.2 | Y-chromosome haplogroup |
+| Haplogrep3 | 3.2.2 | Mitochondrial haplogroup |
+| PLINK | 1.9 | Genome data conversion |
+| ADMIXTURE | 1.3 | Ancestry estimation |
+| smartpca | v16000 | PCA |
+| ADMIXTOOLS | v810 | qpAdm / f-statistics |
 
-# 导出镜像
-bash docker/eigenstrat/export_bg.sh start
-```
+## Key Design Choices
 
-## 文档
+- **Zero dependencies**: All reference genomes and tools bundled inside the image
+- **Offline**: No internet required after `docker load`
+- **Auto-detection**: Automatically identifies BAM reference version (hg38/hg19/T2T)
+- **Chromosome naming**: Automatically adapts between `chrY`↔`Y`, `chrM`↔`MT`
+- **Three references**: hg38, hg19 (hs37d5), and T2T (CHM13v2) — all with BWA indices
 
-- [镜像使用指南](docs/wgs_all_docker_guide.md)
-- [项目进度](docs/project_review.md)
+## Documentation
+
+- [User Manual (中文)](docs/user-manual.md)
+- [Credits & Citations](docs/credits.md)
+- [Project Status](docs/project_review.md)
 
 ## License
 
-MIT
+MIT (platform code). See [credits.md](docs/credits.md) for individual tool licenses.
+
+## Contact
+
+hello@ladydd.com | [guren.xin](https://guren.xin)
